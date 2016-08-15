@@ -1,0 +1,20 @@
+#!/bin/bash
+# Bus 005 Device 011: ID 0529:0514 Aladdin Knowledge Systems eToken Pro v4.2.5.4
+usb_info=$(lsusb | grep "0529:0514")
+RESET=/usr/local/bin/usbreset
+
+if [ ! -z "$usb_info" ] ; then
+	echo "EUMETCast Key Unit found:"
+	echo $usb_info
+	regex="Bus ([0-9]{3}) Device ([0-9]{3}).*"
+	if [[ $usb_info =~ $regex ]] ; then
+		bus=${BASH_REMATCH[1]}
+		device=${BASH_REMATCH[2]}
+		echo "Reseting device '$device' on bus '$bus'."
+		$RESET /dev/bus/usb/$bus/$device
+		exit 0	
+	fi
+else
+	echo "No Key Unit fount!"
+	exit 1
+fi

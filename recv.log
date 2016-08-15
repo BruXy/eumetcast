@@ -1,0 +1,14 @@
+Lvl:Date       Time (UTC)  :Message
+MSG:2015-06-18 09:29:46.742:Program started =============
+MSG:2015-06-18 09:29:46.742:Watchdog starting... [9093]
+MSG:2015-06-18 09:29:46.742:Watchdog started [9093].
+MSG:2015-06-18 09:29:47.606:Starting new child...
+MSG:2015-06-18 09:29:47.606:Started new child [9112].
+MSG:2015-06-18 09:29:47.606:tc-recv starting... [9112]
+MSG:2015-06-18 09:29:47.606:tc-recv version is 2.4.3a (200602131458200) linux2.4_rh7.3-i86pc (Linux 3.10.0-229.4.2.el7.x86_64 on a 1-processor (GenuineIntel, 1 (Model 15, Stepping 11)) system)
+ERR:2015-06-18 09:29:47.606:Cannot find configuration file recv.ini
+MSG:2015-06-18 09:29:47.606:tc-recv shutting down... [9112]
+MSG:2015-06-18 09:29:47.609:Watchdog child quits properly. Shutting down.
+MSG:2015-06-18 09:29:47.609:Watchdog shutting down ... [9093]
+MSG:2015-06-18 09:29:47.609:Watchdog stopped [9093].
+MSG:2015-06-18 09:29:47.610:tc-recv stopped [9112].

@@ -1,0 +1,157 @@
+Enhanced script for EUMETCast reception in GNU/Linux
+====================================================
+
+Author: Martin Bruchanov, bruxy@regnet.cz
+
+Detailed information on these scripts can be found at:
+
+http://bruxy.regnet.cz/web/meteosat/EN/eumetcast-with-ayecka-sr1-in-linux/ 
+
+I've created my own initialization script in SysV style to enabling a reception
+and you can easily modify it for your own purposes. It starts and stops etokend,
+pcscd and Tellicast in right order, also it sets all process priority to maximum
+(nice -20) and has also more informative status that shows PID of running
+deamons, RX status and license status.
+
+1. Installation
+---------------
+
+1.1 Disable original scripts
+
+Use following command to disable original scripts:
+
+chkconfig --del tellicast-client
+chkconfig --del etokend
+chkconfig --del pcscd 
+
+1.2 Compile and install new scripts 
+
+- Run 'make' to compile usbreset, a simple tool for resetting a given USB device.
+- Run 'make install' to install all scripts.
+- You need to edit the header part of all scripts to set proper configuration.
+- Optional. Run 'crontab -e' and add command for EKU monitoring:
+
+* * * * * /usr/local/bin/eku_check
+
+This will check EKU every minute.
+
+2. Configure main script for EUMETCast
+--------------------------------------
+
+This scripts were tested in CentOS 7 and Fedora 21. Although both distributions
+use systemd, they are also compatible with SystemV init scripts. It contains
+all necessary settings and also creates symlink to USB device and checks proper
+settings of multicast ethernet device.
+
+After installation of all components, check the variables in the script header
+for proper settings.
+
+- ETOKEND – path to etokend binary
+- PCSCD – path to pcscd binary
+- PCSCD_DEBUG_LOG – when set to 1, it will enable verbose log
+- TELLICAST – path to tc-recv binary
+- MANAGEMENT_IP – IP address of Ayecka telnet management, it is used for ping 
+                   detection if interface is enabled and also for checking of reception 
+                   menu
+- INTERFACE – interface for EUMETCast multicast reception
+- PRIORITY – priority of ETOKEND, PCSCD and TELLICAST processes, it is set 
+             to the highest value -20.
+- RESET – path to script handling EKU USB reset
+
+Script 'eumetcast' is copied into directory /etc/init.d/ and it is enabled by chkconfig.
+It can be used with parameters: start, stop, reset and status.
+
+Example of status output when everything works properly:
+
+# /etc/init.d/eumetcast status
+etokend is running with PID = 23075.
+pcscd is running with PID = 23081.
+tc-recv is running with PID = 23093 23116 23117.
+Host 192.168.0.2 is on.
+RX Status 1, Configuration 1
+============================
+1. Tuner Status				Locked
+2. Demodulator Status			Locked
+3. Transport Status			Locked
+4. Demodulator Frequency Offset		-568 KHz
+5. Demodulator Es/N0			7.8 dB
+6. Signal Input Level			-16.0 dBm
+7. Demodulator BER			0.00 e-7
+8. Bad Frame Count			10206
+9. Bad Packet Count			32422
+A. Demodulator Link Margin		1.9 dB
+B. Modulation Order and Code Rate	DVB-S2 8PSK 3/5
+C. Link Adaptation			ACM
+D. Pilots				On
+E. Frame Type				Normal
+F. Roll Off				20%
+G. FPGA					Loaded
+
+License status of host_key_4: ****-****-****-****
+Checking enp0s25
+enp0s25: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.0.1  netmask 255.255.255.0  broadcast 192.168.0.255
+        inet6 fe80::21c:c0ff:fe77:5ab9  prefixlen 64  scopeid 0x20<link>
+        ether 00:1c:c0:77:5a:b9  txqueuelen 1000  (Ethernet)
+        RX packets 142100076  bytes 173708934545 (161.7 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 73439  bytes 4755738 (4.5 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        device interrupt 10  memory 0xe3300000-e3320000  
+
+You may notice a few things:
+
+- All processes are running and have assigned PIDs.
+- The management IP address is running and RX Status is obtained.
+- Licence status of host_key_4 must always be '****-****-****-****'
+- Ifconfig status of  the network interface is 'enp0s25'. I use this gigabyte card
+  to receive multicast data. You will notice a huge load of RX packets.
+
+3. EKU Check and USB reset
+--------------------------
+
+This part is optional, but highly recommended. 
+
+I discovered that the EKU randomly lost its license during Tellicast reception.
+When it happened, a restart of all deamons with the previous script was
+necessary. When I installed a new server everything worked fine, but then I
+experienced these multiple restarts of EKU. I tried to disable all unnecessary
+services or services which could slow down performance like SELinux. It got
+worse and suddenly one night the server started to beep  warningly with  an
+overheated CPU. I stopped playing with the EKU license monitoring and started
+to fix the server case temperature.  Then I realized that the EKU licence loss
+happens when lmsensors detect higher temperature. And yes, the problem of
+loosing the EKU license was caused by an overheated PC. How is this possible?
+Probably, when the  Intel CPUs  detect overheating, they put No-Operation (NOP)
+instructions into the processing pipeline.In the end it can lower the
+temperature because the processor circuits gain some free time, but it also
+lowers processing power. This can probably cause timeouts in process switching,
+EKU timeouts and the eventual  loss of  license.
+
+I opened the server case and reassembled disk positions to give space for  the
+distribution of heat and the  resetting problem  disappeared. 
+
+Script 'eku_check' is installed in /usr/local/bin , it contains in its header
+the  following parameters:
+
+- LOG - path to log /var/log/eku_check.log
+- URL - address of TELLICAST Multicast Distribution System Client 2.4.3a,
+        http://localhost:2517/www/client/info.html
+- COUNTER - file with counter of resets. It is disabled now, but when there was
+            more than three resets I restarted the server (on previous hardware 
+            it was the only way how to get licence and it happened about twice 
+            a week).
+- RESTART - command to restart eumetcast
+- COLD_RESTART - number of resets before cold restart of a server
+
+Script 'eku_reset' is installed in /usr/local/bin gets ID of EUMETCast Key Unit
+(EKU). For my EKU it is '0529:0514'. You can obtain this number from output of
+'lsusb' command, e.g:
+
+Bus 008 Device 010: ID 0529:0514 Aladdin Knowledge Systems eToken Pro v4.2.5.4
+
+It detects Bus and Device address and calls compiled program 'usbreset' which 
+resets given USB device. In many cases the restart of pcscd+etokend+tc-recv helps
+itself, but I've found that sometimes it does not work and need this warm restart
+of EKU in my observations.
+

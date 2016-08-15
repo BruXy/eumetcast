@@ -1,0 +1,30 @@
+#!/bin/bash
+LOG=/var/log/eku_check.log
+URL=http://localhost:2517/www/client/info.html
+COUNTER=/var/run/check_eku.txt
+RESTART="/etc/init.d/eumetcast restart"
+COLD_RESTART=3 # if there was more then N continuos restart, then shutdown -r
+
+# Check
+# 'host_key_4:  ****-****-****-****'
+
+host_key=$(elinks -dump http://localhost:2517/www/client/info.html | grep host_key_4 | \
+        cut -d: -f 2)
+now=$(date +%Y%m%d%H%M)
+
+if [[ $host_key == ****-****-****-**** ]] ; then
+	#echo $now OK
+	echo "0" > "$COUNTER"
+else
+	num_of_restarts=$(cat $COUNTER)
+	num_of_restarts=${num_of_restarts:-0} # default value if there is nothing in $COUNTER
+	temperature=$( sensors | sed -ne '/Core/s/.*: *\([^( ]*\) *(.*/\1/p' )
+	echo "$((num_of_restarts+1))" > "$COUNTER"
+	echo $(date) "EKU Restarted ($num_of_restarts), CPU temperature $temperature" >> "$LOG"
+#	if [ $num_of_restarts -ge 3 ] ; then
+#		echo $(date) "EKU number of retart exceeded $num_of_restarts, restarting..." >> "$LOG"
+#		/usr/sbin/shutdown -r 0
+#	fi
+	$RESTART	
+fi
+
